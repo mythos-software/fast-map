@@ -26,6 +26,11 @@ internal class DefaultMappingProcessor<TSource, TDestination> : IMappingProcesso
 
     public TDestination Process(TSource source, TDestination destination)
     {
+        if (destination != null && source is TDestination && IsSimpleType(destination.GetType()))
+        {
+            return (TDestination)(object)source;
+        }
+        
         MapDefaultProperties(source, destination);
         MapConfiguredProperties(source, destination);
 
