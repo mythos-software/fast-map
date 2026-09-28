@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MythosSoftware.FastMap", "MythosSoftware.FastMap\MythosSoftware.FastMap.csproj", "{1AC08A6F-7E28-4E4A-98A3-E7A61AF69183}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MythosSoftware.FastMap.Tests", "MythosSoftware.FastMap.Tests\MythosSoftware.FastMap.Tests.csproj", "{0ED76F20-6F39-48ED-9443-F29CEAE4D92C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1AC08A6F-7E28-4E4A-98A3-E7A61AF69183}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1AC08A6F-7E28-4E4A-98A3-E7A61AF69183}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1AC08A6F-7E28-4E4A-98A3-E7A61AF69183}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1AC08A6F-7E28-4E4A-98A3-E7A61AF69183}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0ED76F20-6F39-48ED-9443-F29CEAE4D92C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0ED76F20-6F39-48ED-9443-F29CEAE4D92C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0ED76F20-6F39-48ED-9443-F29CEAE4D92C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0ED76F20-6F39-48ED-9443-F29CEAE4D92C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
