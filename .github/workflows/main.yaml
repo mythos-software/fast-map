@@ -5,40 +5,62 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Update NuGet package
+    name: Build and publish NuGet package
+
     steps:
-
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Setup dotnet
-        uses: actions/setup-dotnet@v2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
 
-      - name: Install dependencies
-        run: dotnet restore MythosSoftware.FastMap\MythosSoftware.FastMap.csproj
+      - name: Restore dependencies
+        run: dotnet restore MythosSoftware.FastMap/MythosSoftware.FastMap.csproj
 
       - name: Build
-        run: dotnet build MythosSoftware.FastMap\MythosSoftware.FastMap.csproj --configuration Release
+        run: >
+          dotnet build
+          MythosSoftware.FastMap/MythosSoftware.FastMap.csproj
+          --configuration Release
+          --no-restore
 
       - name: Clean package output
         run: rm -rf out
 
-      - name: Build solution and generate NuGet package
+      - name: Generate NuGet package
+        shell: bash
         run: |
-          BASE_VERSION=$(grep -oPm1 "(?<=<Version>)[^<]+" MythosSoftware.FastMap\MythosSoftware.FastMap.csproj)
+          BASE_VERSION=$(grep -oPm1 '(?<=<Version>)[^<]+' MythosSoftware.FastMap/MythosSoftware.FastMap.csproj)
+
           VERSION_PREFIX=$(echo "$BASE_VERSION" | cut -d. -f1,2)
-          PACKAGE_VERSION="$VERSION_PREFIX.${{ github.run_number }}"
+          PACKAGE_VERSION="${VERSION_PREFIX}.${GITHUB_RUN_NUMBER}"
 
-          echo "Packing version: $PACKAGE_VERSION"
-          dotnet pack MythosSoftware.FastMap\MythosSoftware.FastMap.csproj -c Release -o out -p:PackageVersion=$PACKAGE_VERSION 
+          echo "Base version: $BASE_VERSION"
+          echo "Package version: $PACKAGE_VERSION"
 
-      - name: Display folder
-        run: ls out/ && stat out/*
+          dotnet pack \
+            MythosSoftware.FastMap/MythosSoftware.FastMap.csproj \
+            --configuration Release \
+            --no-build \
+            --output out \
+            -p:PackageVersion="$PACKAGE_VERSION"
 
-      - name: Publish
-        run: dotnet nuget push out/*.nupkg --source 'https://api.nuget.org/v3/index.json' --api-key ${{secrets.NUGET_API_KEY}}
+      - name: Display generated packages
+        run: |
+          echo "Generated NuGet packages:"
+          ls -lah out/
+
+      - name: Publish to NuGet
+        run: >
+          dotnet nuget push "out/*.nupkg"
+          --source "https://api.nuget.org/v3/index.json"
+          --api-key "${{ secrets.NUGET_API_KEY }}"
+          --skip-duplicate
