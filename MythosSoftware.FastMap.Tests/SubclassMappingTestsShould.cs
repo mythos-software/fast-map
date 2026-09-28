@@ -12,7 +12,7 @@ namespace MythosSoftware.FastMap.Tests;
 public class SubclassMappingTestsShould
 {
     [Fact]
-    public void ShouldMapSourceToDestinationWhenObjectsHaveSubobjectsProperties()
+    public void MapSourceToDestinationWhenObjectsHaveSubobjectsProperties()
     {
         #region Arrange
         

@@ -24,7 +24,7 @@ public class SimpleMappingTestsShould
     #endregion
     
     [Fact]
-    public void ShouldMapSourceToDestinationWhenObjectsHaveSameProperties()
+    public void MapSourceToDestinationWhenObjectsHaveSameProperties()
     {
         #region Arrange
         
@@ -60,7 +60,7 @@ public class SimpleMappingTestsShould
     }
     
     [Fact]
-    public void ShouldMapSourceToDestinationWhenObjectsHaveDifferentProperties()
+    public void MapSourceToDestinationWhenObjectsHaveDifferentProperties()
     {
         #region Arrange
         
@@ -96,7 +96,7 @@ public class SimpleMappingTestsShould
     }
     
     [Fact]
-    public void ShouldMapDefaultWhenSourceAndDestinationObjectsHaveDifferentProperties()
+    public void MapDefaultWhenSourceAndDestinationObjectsHaveDifferentProperties()
     {
         #region Arrange
         
@@ -131,7 +131,7 @@ public class SimpleMappingTestsShould
     }
 
     [Fact]
-    public void ShouldMapSimpleTypeStringToSimpleType()
+    public void MapSimpleTypeStringToSimpleType()
     {
         #region Arrange
         
@@ -160,7 +160,7 @@ public class SimpleMappingTestsShould
     }
     
     [Fact]
-    public void ShouldMapSimpleTypeDateTimeToSimpleType()
+    public void MapSimpleTypeDateTimeToSimpleType()
     {
         #region Arrange
         
@@ -189,7 +189,7 @@ public class SimpleMappingTestsShould
     }
     
     [Fact]
-    public void ShouldMapSimpleTypeDateTimeOffsetToSimpleType()
+    public void MapSimpleTypeDateTimeOffsetToSimpleType()
     {
         #region Arrange
         
@@ -218,7 +218,7 @@ public class SimpleMappingTestsShould
     }
     
     [Fact]
-    public void ShouldMapSimpleTypeDecimalToSimpleType()
+    public void MapSimpleTypeDecimalToSimpleType()
     {
         #region Arrange
         
@@ -247,7 +247,7 @@ public class SimpleMappingTestsShould
     }
     
     [Fact]
-    public void ShouldMapSimpleTypeDoubleToSimpleType()
+    public void MapSimpleTypeDoubleToSimpleType()
     {
         #region Arrange
         

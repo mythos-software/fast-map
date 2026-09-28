@@ -7,12 +7,32 @@ namespace MythosSoftware.FastMap.MappingProcessors;
 /// Represents the default implementation of the IMappingProcessor interface, providing basic mapping functionality between source and destination types.
 /// Will be used if no custom mapping processor is provided. It can be extended or replaced with a custom implementation to handle specific mapping scenarios.
 /// </summary>
-internal class DefaultMappingProcessor<TSource, TDestination> : IMappingProcessor<TSource, TDestination>
+internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile = null)
+    : IMappingProcessor<TSource, TDestination>, IRequireMapper
 {
     #region Fields
     
     private readonly Dictionary<string, MemberMapping> _memberMappings = new();
     
+    #endregion
+
+    #region Properties
+    
+    internal Profile? Profile { get; } = profile;
+
+    internal DefaultMapper? Mapper { get; private set; }
+
+    public Dictionary<string, MemberMapping> MemberMappings => _memberMappings;
+    
+    #endregion
+
+    #region IRequireMapper
+
+    public void SetMapper(DefaultMapper mapper)
+    {
+        Mapper = mapper;
+    }
+
     #endregion
     
     #region IMappingProcessor
@@ -41,6 +61,24 @@ internal class DefaultMappingProcessor<TSource, TDestination> : IMappingProcesso
     
     #region Internal Methods
     
+    internal void AddMemberMapping(Dictionary<string, MemberMapping> memberMappings)
+    {
+        _memberMappings.Clear();
+        foreach (var kvp in memberMappings)
+        {
+            _memberMappings[kvp.Key] = kvp.Value;
+        }
+        // var destinationProperty = GetProperty(destinationExpression);
+        //
+        // _memberMappings[destinationProperty.Name] = new MemberMapping
+        // {
+        //     DestinationProperty = destinationProperty,
+        //     SourceProperty = configuration.SourceExpression is null ? null : GetPropertyInfo(configuration.SourceExpression),
+        //     Ignored = configuration.IsIgnored,
+        //     SourceGetter = configuration.SourceExpression?.Compile()
+        // };
+    }
+    
     internal void AddMemberMapping<TMember>(
         Expression<Func<TDestination, TMember>> destinationExpression,
         MemberConfigurationExpression<TSource, TDestination, TMember> configuration)
@@ -50,8 +88,58 @@ internal class DefaultMappingProcessor<TSource, TDestination> : IMappingProcesso
         _memberMappings[destinationProperty.Name] = new MemberMapping
         {
             DestinationProperty = destinationProperty,
+            SourceProperty = configuration.SourceExpression is null ? null : GetPropertyInfo(configuration.SourceExpression),
             Ignored = configuration.IsIgnored,
             SourceGetter = configuration.SourceExpression?.Compile()
+        };
+    }
+    
+    internal MemberMapping? GetReversedMemberMapping(
+        MemberMapping originalMapping)
+    {
+        if (originalMapping.Ignored)
+            return null;
+
+        if (originalMapping.SourceProperty is null)
+        {
+            throw new InvalidOperationException(
+                $"Mapping to '{originalMapping.DestinationProperty.Name}' " +
+                "cannot be reversed because its source is not a direct property.");
+        }
+
+        // Original:
+        // SimplePerson.Name -> ModifiedSimplePerson.FirstName
+        //
+        // Reverse:
+        // ModifiedSimplePerson.FirstName -> SimplePerson.Name
+
+        var reverseDestinationProperty = originalMapping.SourceProperty;
+        var reverseSourceProperty = originalMapping.DestinationProperty;
+
+        var sourceParameter = Expression.Parameter(
+            typeof(TDestination), // <-- IMPORTANT
+            "src");
+
+        var sourcePropertyExpression = Expression.Property(
+            sourceParameter,
+            reverseSourceProperty);
+
+        var delegateType = typeof(Func<,>).MakeGenericType(
+            typeof(TDestination), // <-- IMPORTANT
+            reverseSourceProperty.PropertyType);
+
+        var sourceGetter = Expression.Lambda(
+                delegateType,
+                sourcePropertyExpression,
+                sourceParameter)
+            .Compile();
+
+        return new MemberMapping
+        {
+            DestinationProperty = reverseDestinationProperty,
+            SourceProperty = reverseSourceProperty,
+            SourceGetter = sourceGetter,
+            Ignored = false
         };
     }
     
@@ -97,9 +185,11 @@ internal class DefaultMappingProcessor<TSource, TDestination> : IMappingProcesso
             }
 
             // Complex property: must go through a mapping processor.
-            var mappedValue = MappingProcessorInvoker.Map(sourceValue, sourceType, destinationPropertyType);
-
-            destinationProperty.SetValue(destination, mappedValue);
+            if (Mapper is not null)
+            {
+                var mappedValue = Mapper.Map(sourceValue, sourceType, destinationPropertyType);
+                destinationProperty.SetValue(destination, mappedValue);
+            }
         }
     }
 
@@ -131,6 +221,23 @@ internal class DefaultMappingProcessor<TSource, TDestination> : IMappingProcesso
         }
 
         throw new ArgumentException("Expression must reference a destination property.", nameof(expression));
+    }
+    
+    private static PropertyInfo? GetPropertyInfo(LambdaExpression expression)
+    {
+        Expression body = expression.Body;
+
+        // Handles conversions such as x => (object)x.Name
+        if (body is UnaryExpression unary &&
+            unary.NodeType == ExpressionType.Convert)
+        {
+            body = unary.Operand;
+        }
+
+        return body is MemberExpression memberExpression
+               && memberExpression.Member is PropertyInfo property
+            ? property
+            : null;
     }
     
     private static bool IsSimpleType(Type type)

@@ -7,12 +7,29 @@ namespace MythosSoftware.FastMap;
 /// </summary>
 public class Profile
 {
+    #region Fields
+    
+    private readonly List<object> _processors = new();
+
+    internal IReadOnlyList<object> Processors => _processors;
+    
+    #endregion
+
+    #region Methods
+
     protected IMappingProcessor<TSource, TDestination> CreateMap<TSource, TDestination>()
     {
-        var processor = new DefaultMappingProcessor<TSource, TDestination>();
+        var processor = new DefaultMappingProcessor<TSource, TDestination>(this);
 
-        MappingProcessorBuilder<TSource, TDestination>.Register(processor);
+        _processors.Add(processor);
 
         return processor;
     }
+
+    internal void RegisterProcessor(object processor)
+    {
+        _processors.Add(processor);
+    }
+    
+    #endregion
 }

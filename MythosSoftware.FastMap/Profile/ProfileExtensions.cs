@@ -34,4 +34,33 @@ public static class ProfileExtensions
 
         return mapping;
     }
+    
+    public static void ReverseMap<
+        TSource,
+        TDestination>(this IMappingProcessor<TSource, TDestination> mapping)
+    {
+        ArgumentNullException.ThrowIfNull(mapping);
+        
+        if (mapping is not DefaultMappingProcessor<TSource, TDestination> currentProcessor)
+        {
+            throw new InvalidOperationException($"ForMember is not supported by {mapping.GetType().Name}.");
+        }
+        
+        var mappings = new Dictionary<string, MemberMapping>();
+        var processor = new DefaultMappingProcessor<TDestination, TSource>(currentProcessor.Profile);
+        
+        foreach (var memberMapping in currentProcessor.MemberMappings)
+        {
+            var profile = currentProcessor.GetReversedMemberMapping(memberMapping.Value);
+
+            if (profile != null)
+            {
+                mappings[profile.DestinationProperty.Name] = profile;
+            }
+        }
+        
+        processor.AddMemberMapping(mappings);
+        
+        currentProcessor.Profile?.RegisterProcessor(processor);
+    }
 }

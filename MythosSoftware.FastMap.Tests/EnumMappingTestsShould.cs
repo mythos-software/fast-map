@@ -12,7 +12,7 @@ namespace MythosSoftware.FastMap.Tests;
 public class EnumMappingTestsShould
 {
     [Fact]
-    public void ShouldMapSourceToDestinationWhenObjectIsEnum()
+    public void MapSourceToDestinationWhenObjectIsEnum()
     {
         #region Arrange
         
@@ -41,7 +41,7 @@ public class EnumMappingTestsShould
     }
 
     [Fact]
-    public void ShouldMapSourceToDestinationWhenObjectContainsEnum()
+    public void MapSourceToDestinationWhenObjectContainsEnum()
     {
         #region Arrange
         
@@ -76,7 +76,7 @@ public class EnumMappingTestsShould
     }
     
     [Fact]
-    public void ShouldMapSourceToDestinationWhenObjectContainsEnumAsString()
+    public void MapSourceToDestinationWhenObjectContainsEnumAsString()
     {
         #region Arrange
         
@@ -111,7 +111,7 @@ public class EnumMappingTestsShould
     }
     
     [Fact]
-    public void ShouldMapSourceToDestinationWhenObjectContainsEnumToString()
+    public void MapSourceToDestinationWhenObjectContainsEnumToString()
     {
         #region Arrange
         

@@ -8,8 +8,17 @@ namespace MythosSoftware.FastMap.MappingProcessors;
 /// </summary>
 /// <typeparam name="TSource"></typeparam>
 /// <typeparam name="TDestination"></typeparam>
-internal sealed class CollectionMappingProcessor<TSource, TDestination> : IMappingProcessor<TSource, TDestination>
+internal sealed class CollectionMappingProcessor<TSource, TDestination>(DefaultMapper mapper)
+    : IMappingProcessor<TSource, TDestination>
 {
+    #region Fields
+    
+    private readonly DefaultMapper? _mapper = mapper;
+    
+    #endregion
+    
+    #region IMappingProcessor
+
     public static bool CanHandle => GetElementType(typeof(TSource)) is not null && GetElementType(typeof(TDestination)) is not null;
 
     public TDestination Process(TSource source)
@@ -61,8 +70,12 @@ internal sealed class CollectionMappingProcessor<TSource, TDestination> : IMappi
          */
         return Process(source);
     }
+    
+    #endregion
+    
+    #region Private Methods
 
-    private static IList MapItems(IEnumerable source, Type destinationElementType)
+    private IList MapItems(IEnumerable source, Type destinationElementType)
     {
         var listType = typeof(List<>).MakeGenericType(destinationElementType);
 
@@ -82,25 +95,14 @@ internal sealed class CollectionMappingProcessor<TSource, TDestination> : IMappi
         return result;
     }
 
-    private static object MapItem(object source, Type destinationType)
+    private object MapItem(object source, Type destinationType)
     {
-        var method = typeof(CollectionMappingProcessor<TSource, TDestination>)
-            .GetMethod(
-                nameof(MapItemGeneric),
-                BindingFlags.NonPublic |
-                BindingFlags.Static)!
-            .MakeGenericMethod(
-                source.GetType(),
-                destinationType);
+        if (_mapper is not null)
+        {
+            return _mapper.Map(source, source.GetType(), destinationType)!;
+        }
 
-        return method.Invoke(null, new[] { source })!;
-    }
-
-    private static object MapItemGeneric<TItemSource, TItemDestination>(object source)
-    {
-        var processor = MappingProcessorBuilder<TItemSource, TItemDestination>.Build();
-
-        return processor.Process((TItemSource)source)!;
+        return source;
     }
 
     private static TDestination CreateDestination(IList items, Type elementType)
@@ -179,4 +181,6 @@ internal sealed class CollectionMappingProcessor<TSource, TDestination> : IMappi
 
         return enumerableInterface?.GetGenericArguments()[0];
     }
+    
+    #endregion
 }

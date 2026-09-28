@@ -12,7 +12,7 @@ namespace MythosSoftware.FastMap.Tests;
 public class CollectionMappingTestsShould
 {
     [Fact]
-    public void ShouldMapSourceListToDestinationListWhenObjectsHaveSameProperties()
+    public void MapSourceListToDestinationListWhenObjectsHaveSameProperties()
     {
         #region Arrange
 
@@ -52,7 +52,7 @@ public class CollectionMappingTestsShould
     }
 
     [Fact]
-    public void ShouldMapSourceSubobjectWithListToDestinationSubobjectWithListWhenObjectsHaveSameProperties()
+    public void MapSourceSubobjectWithListToDestinationSubobjectWithListWhenObjectsHaveSameProperties()
     {
         #region Arrange
 
@@ -99,7 +99,7 @@ public class CollectionMappingTestsShould
     }
     
     [Fact]
-    public void ShouldMapSourceListToDestinationListWhenObjectsHaveDifferentProperties()
+    public void MapSourceListToDestinationListWhenObjectsHaveDifferentProperties()
     {
         #region Arrange
 
@@ -138,7 +138,7 @@ public class CollectionMappingTestsShould
     }
     
     [Fact]
-    public void ShouldMapSourceSubobjectWithStringListToDestinationSubobjectWithStringListWhenObjectsHaveSameProperties()
+    public void MapSourceSubobjectWithStringListToDestinationSubobjectWithStringListWhenObjectsHaveSameProperties()
     {
         #region Arrange
 

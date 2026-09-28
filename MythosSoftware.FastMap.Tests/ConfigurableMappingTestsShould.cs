@@ -12,7 +12,7 @@ namespace MythosSoftware.FastMap.Tests;
 public class ConfigurableMappingTestsShould
 {
     [Fact]
-    public void ShouldPartiallyMapSourceToDestinationWhenObjectsHaveSameProperties()
+    public void PartiallyMapSourceToDestinationWhenObjectsHaveSameProperties()
     {
         #region Arrange
         
