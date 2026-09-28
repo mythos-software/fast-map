@@ -3,7 +3,9 @@
     <PropertyGroup>
         <Authors>Mythos Software</Authors>
         <Description>Free, full open source mapper</Description>
-        <Icon>..\icon.png</Icon>
+        <PackageIcon>..\icon.png</PackageIcon>
+        <PackageProjectUrl>https://github.com/mythos-software/fast-map</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/mythos-software/fast-map/blob/main/LICENSE</PackageLicenseUrl>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
