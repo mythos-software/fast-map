@@ -41,18 +41,31 @@ jobs:
           --project MythosSoftware.FastMap.Benchmark/MythosSoftware.FastMap.Benchmark.csproj
           --configuration Release
           --no-restore
+          -- --filter "*"
 
-      - name: Find BenchmarkDotNet markdown report
+      - name: Combine BenchmarkDotNet markdown reports
         id: report
         shell: bash
         run: |
-          REPORT=$(find BenchmarkDotNet.Artifacts/results \
-            -type f \
-            -name "*-report-github.md" \
-            | head -n 1)
+          RESULTS_DIR="BenchmarkDotNet.Artifacts/results"
+          COMBINED="$RESULTS_DIR/combined-report.md"
 
-          if [ -z "$REPORT" ]; then
-            echo "BenchmarkDotNet GitHub Markdown report not found."
+          if [ ! -d "$RESULTS_DIR" ]; then
+            echo "BenchmarkDotNet results directory not found."
+            find BenchmarkDotNet.Artifacts -type f || true
+            exit 1
+          fi
+
+          mapfile -t REPORTS < <(
+            find "$RESULTS_DIR" \
+              -type f \
+              -name "*-report-github.md" \
+              ! -name "combined-report.md" \
+              | sort
+          )
+
+          if [ "${#REPORTS[@]}" -eq 0 ]; then
+            echo "BenchmarkDotNet GitHub Markdown reports not found."
 
             echo "Available artifact files:"
             find BenchmarkDotNet.Artifacts -type f || true
@@ -60,8 +73,26 @@ jobs:
             exit 1
           fi
 
-          echo "report=$REPORT" >> "$GITHUB_OUTPUT"
-          echo "Using report: $REPORT"
+          : > "$COMBINED"
+
+          for REPORT in "${REPORTS[@]}"; do
+            echo "Adding report: $REPORT"
+
+            NAME=$(basename "$REPORT" "-report-github.md")
+
+            echo "## $NAME" >> "$COMBINED"
+            echo "" >> "$COMBINED"
+
+            cat "$REPORT" >> "$COMBINED"
+
+            echo "" >> "$COMBINED"
+            echo "" >> "$COMBINED"
+          done
+
+          echo "report=$COMBINED" >> "$GITHUB_OUTPUT"
+
+          echo "Combined report:"
+          cat "$COMBINED"
 
       - name: Update benchmark README
         shell: bash

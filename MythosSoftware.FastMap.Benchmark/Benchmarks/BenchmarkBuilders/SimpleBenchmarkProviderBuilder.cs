@@ -20,5 +20,17 @@ internal sealed class SimpleBenchmarkProviderBuilder<TSource, TDestination>
         BenchmarkMapsterProfile<TSource, TDestination>.Configure();
 
         return services.BuildServiceProvider();
-    }
+    } 
+    
+    public (IMapper FastMap, AutoMapper.IMapper AutoMapper) Build(Profile fastMapProfile, AutoMapper.Profile autoMapperProfile)
+     {
+         var services = new ServiceCollection();
+         services.AddFastMap(fastMapProfile);
+
+         var autoMapperConfig = new AutoMapper.MapperConfiguration(cfg => cfg.AddProfile(autoMapperProfile));
+         services.AddSingleton(autoMapperConfig.CreateMapper());
+
+         var provider = services.BuildServiceProvider();
+         return (provider.GetRequiredService<IMapper>(), provider.GetRequiredService<AutoMapper.IMapper>());
+     }
 }
