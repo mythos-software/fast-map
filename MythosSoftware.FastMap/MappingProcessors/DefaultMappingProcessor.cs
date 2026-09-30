@@ -68,15 +68,6 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
         {
             _memberMappings[kvp.Key] = kvp.Value;
         }
-        // var destinationProperty = GetProperty(destinationExpression);
-        //
-        // _memberMappings[destinationProperty.Name] = new MemberMapping
-        // {
-        //     DestinationProperty = destinationProperty,
-        //     SourceProperty = configuration.SourceExpression is null ? null : GetPropertyInfo(configuration.SourceExpression),
-        //     Ignored = configuration.IsIgnored,
-        //     SourceGetter = configuration.SourceExpression?.Compile()
-        // };
     }
     
     internal void AddMemberMapping<TMember>(
@@ -107,17 +98,11 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
                 "cannot be reversed because its source is not a direct property.");
         }
 
-        // Original:
-        // SimplePerson.Name -> ModifiedSimplePerson.FirstName
-        //
-        // Reverse:
-        // ModifiedSimplePerson.FirstName -> SimplePerson.Name
-
         var reverseDestinationProperty = originalMapping.SourceProperty;
         var reverseSourceProperty = originalMapping.DestinationProperty;
 
         var sourceParameter = Expression.Parameter(
-            typeof(TDestination), // <-- IMPORTANT
+            typeof(TDestination),
             "src");
 
         var sourcePropertyExpression = Expression.Property(
@@ -125,7 +110,7 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
             reverseSourceProperty);
 
         var delegateType = typeof(Func<,>).MakeGenericType(
-            typeof(TDestination), // <-- IMPORTANT
+            typeof(TDestination),
             reverseSourceProperty.PropertyType);
 
         var sourceGetter = Expression.Lambda(
@@ -160,8 +145,7 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
             {
                 continue;
             }
-
-            // ForMember controls this destination property.
+            
             if (_memberMappings.ContainsKey(destinationProperty.Name))
             {
                 continue;
@@ -183,8 +167,7 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
                 destinationProperty.SetValue(destination, sourceValue);
                 continue;
             }
-
-            // Complex property: must go through a mapping processor.
+            
             if (Mapper is not null)
             {
                 var mappedValue = Mapper.Map(sourceValue, sourceType, destinationPropertyType);
@@ -226,8 +209,7 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
     private static PropertyInfo? GetPropertyInfo(LambdaExpression expression)
     {
         Expression body = expression.Body;
-
-        // Handles conversions such as x => (object)x.Name
+        
         if (body is UnaryExpression unary &&
             unary.NodeType == ExpressionType.Convert)
         {

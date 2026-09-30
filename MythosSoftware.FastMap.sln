@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MythosSoftware.FastMap", "M
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MythosSoftware.FastMap.Tests", "MythosSoftware.FastMap.Tests\MythosSoftware.FastMap.Tests.csproj", "{0ED76F20-6F39-48ED-9443-F29CEAE4D92C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MythosSoftware.FastMap.Benchmark", "MythosSoftware.FastMap.Benchmark\MythosSoftware.FastMap.Benchmark.csproj", "{1D7309C9-66C4-4F4A-860B-6F2E4792B17A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{0ED76F20-6F39-48ED-9443-F29CEAE4D92C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0ED76F20-6F39-48ED-9443-F29CEAE4D92C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0ED76F20-6F39-48ED-9443-F29CEAE4D92C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D7309C9-66C4-4F4A-860B-6F2E4792B17A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D7309C9-66C4-4F4A-860B-6F2E4792B17A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D7309C9-66C4-4F4A-860B-6F2E4792B17A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D7309C9-66C4-4F4A-860B-6F2E4792B17A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

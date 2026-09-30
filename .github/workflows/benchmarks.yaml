@@ -1,0 +1,131 @@
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+    paths:
+      - "MythosSoftware.FastMap/**"
+      - "MythosSoftware.FastMap.Benchmark/**/*.cs"
+      - "MythosSoftware.FastMap.Benchmark/**/*.csproj"
+      - ".github/workflows/benchmarks.yaml"
+
+permissions:
+  contents: write
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore benchmark project
+        run: >
+          dotnet restore
+          MythosSoftware.FastMap.Benchmark/MythosSoftware.FastMap.Benchmark.csproj
+
+      - name: Run benchmarks
+        run: >
+          dotnet run
+          --project MythosSoftware.FastMap.Benchmark/MythosSoftware.FastMap.Benchmark.csproj
+          --configuration Release
+          --no-restore
+
+      - name: Find BenchmarkDotNet markdown report
+        id: report
+        shell: bash
+        run: |
+          REPORT=$(find BenchmarkDotNet.Artifacts/results \
+            -type f \
+            -name "*-report-github.md" \
+            | head -n 1)
+
+          if [ -z "$REPORT" ]; then
+            echo "BenchmarkDotNet GitHub Markdown report not found."
+
+            echo "Available artifact files:"
+            find BenchmarkDotNet.Artifacts -type f || true
+
+            exit 1
+          fi
+
+          echo "report=$REPORT" >> "$GITHUB_OUTPUT"
+          echo "Using report: $REPORT"
+
+      - name: Update benchmark README
+        shell: bash
+        env:
+          REPORT: ${{ steps.report.outputs.report }}
+        run: |
+          README="MythosSoftware.FastMap.Benchmark/README.md"
+
+          if [ ! -f "$README" ]; then
+            echo "README not found: $README"
+            exit 1
+          fi
+
+          if ! grep -q "<!-- BENCHMARK_START -->" "$README"; then
+            echo "BENCHMARK_START marker not found."
+            exit 1
+          fi
+
+          if ! grep -q "<!-- BENCHMARK_END -->" "$README"; then
+            echo "BENCHMARK_END marker not found."
+            exit 1
+          fi
+
+          awk '
+            /<!-- BENCHMARK_START -->/ {
+              print
+              print ""
+
+              while ((getline line < ENVIRON["REPORT"]) > 0) {
+                print line
+              }
+
+              print ""
+              skip=1
+              next
+            }
+
+            /<!-- BENCHMARK_END -->/ {
+              skip=0
+              print
+              next
+            }
+
+            !skip
+          ' "$README" > "$README.tmp"
+
+          mv "$README.tmp" "$README"
+
+      - name: Show README changes
+        run: git diff -- MythosSoftware.FastMap.Benchmark/README.md
+
+      - name: Commit benchmark results
+        shell: bash
+        run: |
+          if git diff --quiet -- MythosSoftware.FastMap.Benchmark/README.md; then
+            echo "Benchmark README did not change."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add MythosSoftware.FastMap.Benchmark/README.md
+
+          git commit -m "Update benchmark results [skip ci]"
+
+          git push
