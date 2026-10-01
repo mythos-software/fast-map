@@ -7,7 +7,7 @@ using MythosSoftware.FastMap.Benchmark.Objects;
 namespace MythosSoftware.FastMap.Benchmark.Benchmarks;
 
 [MemoryDiagnoser]
-public class FastMapBenchmarks
+public class SimpleObjectBenchmarks
 {
     #region Fields
     

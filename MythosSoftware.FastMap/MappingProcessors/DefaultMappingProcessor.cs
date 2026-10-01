@@ -12,7 +12,11 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
 {
     #region Fields
     
+    private static readonly Func<TDestination> s_createDestination = CreateDestinationFactory();
+
     private readonly Dictionary<string, MemberMapping> _memberMappings = new();
+
+    private Func<TSource, TDestination, TDestination>? _mapDelegate;
     
     #endregion
 
@@ -39,9 +43,7 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
     
     public TDestination Process(TSource source)
     {
-        var destination = Activator.CreateInstance<TDestination>();
-
-        return Process(source, destination);
+        return Process(source, s_createDestination());
     }
 
     public TDestination Process(TSource source, TDestination destination)
@@ -51,10 +53,7 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
             return (TDestination)(object)source;
         }
         
-        MapDefaultProperties(source, destination);
-        MapConfiguredProperties(source, destination);
-
-        return destination;
+        return (_mapDelegate ??= BuildMapDelegate())(source, destination);
     }
     
     #endregion
@@ -63,6 +62,7 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
     
     internal void AddMemberMapping(Dictionary<string, MemberMapping> memberMappings)
     {
+        _mapDelegate = null;
         _memberMappings.Clear();
         foreach (var kvp in memberMappings)
         {
@@ -75,6 +75,7 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
         MemberConfigurationExpression<TSource, TDestination, TMember> configuration)
     {
         var destinationProperty = GetProperty(destinationExpression);
+        _mapDelegate = null;
 
         _memberMappings[destinationProperty.Name] = new MemberMapping
         {
@@ -132,68 +133,204 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
     
     #region Private Methods
     
-    private void MapDefaultProperties(TSource source, TDestination destination)
+    private Func<TSource, TDestination, TDestination> BuildMapDelegate()
     {
-        var sourceProperties = typeof(TSource).GetProperties();
+        var source = Expression.Parameter(typeof(TSource), "source");
+        var destination = Expression.Parameter(typeof(TDestination), "destination");
+        var body = new List<Expression>();
+
+        AddDefaultPropertyAssignments(source, destination, body);
+        AddConfiguredPropertyAssignments(source, destination, body);
+
+        body.Add(destination);
+
+        return Expression
+            .Lambda<Func<TSource, TDestination, TDestination>>(Expression.Block(body), source, destination)
+            .Compile();
+    }
+
+    private void AddDefaultPropertyAssignments(ParameterExpression source, ParameterExpression destination, List<Expression> body)
+    {
         var destinationType = typeof(TDestination);
 
-        foreach (var sourceProperty in sourceProperties)
+        foreach (var sourceProperty in typeof(TSource).GetProperties())
         {
+            var getter = sourceProperty.GetGetMethod(true);
+
+            if (getter is null || getter.IsStatic || sourceProperty.GetIndexParameters().Length > 0)
+            {
+                continue;
+            }
+
             var destinationProperty = destinationType.GetProperty(sourceProperty.Name);
 
             if (destinationProperty is null || !destinationProperty.CanWrite)
             {
                 continue;
             }
-            
+
+            var setter = destinationProperty.GetSetMethod(true);
+
+            if (setter is null || setter.IsStatic || destinationProperty.GetIndexParameters().Length > 0)
+            {
+                continue;
+            }
+
             if (_memberMappings.ContainsKey(destinationProperty.Name))
             {
                 continue;
             }
-            
-            var sourceValue = sourceProperty.GetValue(source);
 
-            if (sourceValue is null)
+            body.Add(BuildDefaultAssignment(source, destination, sourceProperty, destinationProperty));
+        }
+    }
+
+    private Expression BuildDefaultAssignment(
+        ParameterExpression source,
+        ParameterExpression destination,
+        PropertyInfo sourceProperty,
+        PropertyInfo destinationProperty)
+    {
+        var sourceType = sourceProperty.PropertyType;
+        var destinationPropertyType = destinationProperty.PropertyType;
+        var value = Expression.Variable(sourceType, "value");
+        var destinationMember = Expression.Property(destination, destinationProperty);
+
+        Expression assignNonNull;
+
+        if (IsSimpleType(sourceType) && IsSimpleType(destinationPropertyType))
+        {
+            assignNonNull = BuildSimpleAssignment(destination, destinationProperty, value);
+        }
+        else
+        {
+            // Nested mapping is resolved through the mapper at runtime, matching the previous behaviour
+            // where nothing is assigned when no mapper is attached.
+            var mapper = Expression.Property(Expression.Constant(this), nameof(Mapper));
+            var mapMethod = typeof(DefaultMapper)
+                .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Single(m => m.Name == nameof(DefaultMapper.Map)
+                             && m.IsGenericMethodDefinition
+                             && m.GetGenericArguments().Length == 2
+                             && m.GetParameters().Length == 1)
+                .MakeGenericMethod(sourceType, destinationPropertyType);
+
+            assignNonNull = Expression.IfThen(
+                Expression.NotEqual(mapper, Expression.Constant(null, typeof(DefaultMapper))),
+                Expression.Assign(destinationMember, Expression.Call(mapper, mapMethod, value)));
+        }
+
+        Expression assignment = assignNonNull;
+
+        if (!sourceType.IsValueType || Nullable.GetUnderlyingType(sourceType) is not null)
+        {
+            assignment = Expression.IfThenElse(
+                Expression.Equal(value, Expression.Constant(null, sourceType)),
+                Expression.Assign(destinationMember, Expression.Default(destinationPropertyType)),
+                assignNonNull);
+        }
+
+        return Expression.Block(
+            new[] { value },
+            Expression.Assign(value, Expression.Property(source, sourceProperty)),
+            assignment);
+    }
+
+    private static Expression BuildSimpleAssignment(
+        ParameterExpression destination,
+        PropertyInfo destinationProperty,
+        Expression value)
+    {
+        var destinationPropertyType = destinationProperty.PropertyType;
+        var destinationMember = Expression.Property(destination, destinationProperty);
+
+        if (destinationPropertyType.IsAssignableFrom(value.Type))
+        {
+            return Expression.Assign(destinationMember, Expression.Convert(value, destinationPropertyType));
+        }
+
+        if (Nullable.GetUnderlyingType(value.Type) == destinationPropertyType)
+        {
+            return Expression.Assign(destinationMember, Expression.Property(value, nameof(Nullable<int>.Value)));
+        }
+
+        if (Nullable.GetUnderlyingType(destinationPropertyType) == value.Type)
+        {
+            return Expression.Assign(destinationMember, Expression.Convert(value, destinationPropertyType));
+        }
+
+        return BuildReflectionAssignment(destination, destinationProperty, value);
+    }
+
+    private static Expression BuildReflectionAssignment(
+        ParameterExpression destination,
+        PropertyInfo destinationProperty,
+        Expression value)
+    {
+        return Expression.Call(
+            Expression.Constant(destinationProperty),
+            typeof(PropertyInfo).GetMethod(nameof(PropertyInfo.SetValue), new[] { typeof(object), typeof(object) })!,
+            Expression.Convert(destination, typeof(object)),
+            Expression.Convert(value, typeof(object)));
+    }
+
+    private void AddConfiguredPropertyAssignments(ParameterExpression source, ParameterExpression destination, List<Expression> body)
+    {
+        foreach (var mapping in _memberMappings.Values)
+        {
+            if (mapping.Ignored || mapping.SourceGetter is null)
             {
-                destinationProperty.SetValue(destination, null);
                 continue;
             }
-            
-            var sourceType = sourceProperty.PropertyType;
-            var destinationPropertyType = destinationProperty.PropertyType;
 
-            if (IsSimpleType(sourceType) && IsSimpleType(destinationPropertyType))
+            var getterType = mapping.SourceGetter.GetType();
+            var destinationProperty = mapping.DestinationProperty;
+            Expression value;
+
+            if (getterType.IsGenericType
+                && getterType.GetGenericTypeDefinition() == typeof(Func<,>)
+                && getterType.GetGenericArguments()[0].IsAssignableFrom(typeof(TSource)))
             {
-                destinationProperty.SetValue(destination, sourceValue);
-                continue;
+                value = Expression.Invoke(
+                    Expression.Constant(mapping.SourceGetter, getterType),
+                    Expression.Convert(source, getterType.GetGenericArguments()[0]));
             }
-            
-            if (Mapper is not null)
+            else
             {
-                var mappedValue = Mapper.Map(sourceValue, sourceType, destinationPropertyType);
-                destinationProperty.SetValue(destination, mappedValue);
+                value = Expression.Call(
+                    Expression.Constant(mapping.SourceGetter, typeof(Delegate)),
+                    typeof(Delegate).GetMethod(nameof(Delegate.DynamicInvoke))!,
+                    Expression.NewArrayInit(typeof(object), Expression.Convert(source, typeof(object))));
+            }
+
+            if (destinationProperty.PropertyType.IsAssignableFrom(value.Type))
+            {
+                body.Add(Expression.Assign(
+                    Expression.Property(destination, destinationProperty),
+                    Expression.Convert(value, destinationProperty.PropertyType)));
+            }
+            else
+            {
+                body.Add(BuildReflectionAssignment(destination, destinationProperty, value));
             }
         }
     }
 
-    private void MapConfiguredProperties(TSource source, TDestination destination)
+    private static Func<TDestination> CreateDestinationFactory()
     {
-        foreach (var mapping in _memberMappings.Values)
+        var destinationType = typeof(TDestination);
+
+        if (destinationType.IsValueType)
         {
-            if (mapping.Ignored)
-            {
-                continue;
-            }
-
-            if (mapping.SourceGetter is null)
-            {
-                continue;
-            }
-
-            var value = mapping.SourceGetter.DynamicInvoke(source);
-
-            mapping.DestinationProperty.SetValue(destination, value);
+            return static () => default!;
         }
+
+        if (!destinationType.IsAbstract && destinationType.GetConstructor(Type.EmptyTypes) is { } constructor)
+        {
+            return Expression.Lambda<Func<TDestination>>(Expression.New(constructor)).Compile();
+        }
+
+        return Activator.CreateInstance<TDestination>;
     }
     
     private static PropertyInfo GetProperty<TMember>(Expression<Func<TDestination, TMember>> expression)
