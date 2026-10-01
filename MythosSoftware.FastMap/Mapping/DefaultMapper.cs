@@ -86,6 +86,16 @@ internal class DefaultMapper : IMapper
 
         return mapDelegate(this, source);
     }
+
+    internal bool HasRegisteredProcessor<TSource, TDestination>()
+    {
+        return _registry.Find<TSource, TDestination>() is not null;
+    }
+
+    internal IMappingProcessor<TSource, TDestination> GetMappingProcessor<TSource, TDestination>()
+    {
+        return GetProcessor<TSource, TDestination>();
+    }
     
     #endregion
     
