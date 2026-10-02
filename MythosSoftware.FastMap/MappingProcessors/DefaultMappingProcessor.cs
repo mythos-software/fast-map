@@ -86,6 +86,30 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
         };
     }
     
+    internal void AddMemberMapping<TMember>(
+        Expression<Func<TDestination, TMember>> destinationExpression,
+        Func<TSource, TDestination, TMember, TMember> resolver)
+    {
+        var destinationProperty = GetProperty(destinationExpression);
+
+        if (destinationExpression.Body is not MemberExpression member
+            || member.Expression != destinationExpression.Parameters[0]
+            || destinationProperty.GetGetMethod(true) is not { IsStatic: false }
+            || destinationProperty.GetSetMethod(true) is not { IsStatic: false })
+        {
+            throw new ArgumentException(
+                "Expression must reference a readable and writable property directly on the destination.",
+                nameof(destinationExpression));
+        }
+
+        _mapDelegate = null;
+        _memberMappings[destinationProperty.Name] = new MemberMapping
+        {
+            DestinationProperty = destinationProperty,
+            Resolver = resolver
+        };
+    }
+
     internal MemberMapping? GetReversedMemberMapping(
         MemberMapping originalMapping)
     {
@@ -278,29 +302,45 @@ internal class DefaultMappingProcessor<TSource, TDestination>(Profile? profile =
     {
         foreach (var mapping in _memberMappings.Values)
         {
-            if (mapping.Ignored || mapping.SourceGetter is null)
+            if (mapping.Ignored)
             {
                 continue;
             }
 
-            var getterType = mapping.SourceGetter.GetType();
             var destinationProperty = mapping.DestinationProperty;
             Expression value;
 
-            if (getterType.IsGenericType
-                && getterType.GetGenericTypeDefinition() == typeof(Func<,>)
-                && getterType.GetGenericArguments()[0].IsAssignableFrom(typeof(TSource)))
+            if (mapping.Resolver is { } resolver)
             {
                 value = Expression.Invoke(
-                    Expression.Constant(mapping.SourceGetter, getterType),
-                    Expression.Convert(source, getterType.GetGenericArguments()[0]));
+                    Expression.Constant(resolver),
+                    source,
+                    destination,
+                    Expression.Property(destination, destinationProperty));
             }
             else
             {
-                value = Expression.Call(
-                    Expression.Constant(mapping.SourceGetter, typeof(Delegate)),
-                    typeof(Delegate).GetMethod(nameof(Delegate.DynamicInvoke))!,
-                    Expression.NewArrayInit(typeof(object), Expression.Convert(source, typeof(object))));
+                if (mapping.SourceGetter is null)
+                {
+                    continue;
+                }
+
+                var getterType = mapping.SourceGetter.GetType();
+                if (getterType.IsGenericType
+                    && getterType.GetGenericTypeDefinition() == typeof(Func<,>)
+                    && getterType.GetGenericArguments()[0].IsAssignableFrom(typeof(TSource)))
+                {
+                    value = Expression.Invoke(
+                        Expression.Constant(mapping.SourceGetter, getterType),
+                        Expression.Convert(source, getterType.GetGenericArguments()[0]));
+                }
+                else
+                {
+                    value = Expression.Call(
+                        Expression.Constant(mapping.SourceGetter, typeof(Delegate)),
+                        typeof(Delegate).GetMethod(nameof(Delegate.DynamicInvoke))!,
+                        Expression.NewArrayInit(typeof(object), Expression.Convert(source, typeof(object))));
+                }
             }
 
             if (destinationProperty.PropertyType.IsAssignableFrom(value.Type))

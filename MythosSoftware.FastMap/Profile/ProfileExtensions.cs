@@ -41,7 +41,25 @@ public static class ProfileExtensions
         Expression<Func<TDestination, TMember>> destinationMember,
         Action<MemberOptions<TSource, TDestination, TMember>> configure)
     {
-        //"Work in progress"
+        ArgumentNullException.ThrowIfNull(mapping);
+        ArgumentNullException.ThrowIfNull(destinationMember);
+        ArgumentNullException.ThrowIfNull(configure);
+
+        var options = new MemberOptions<TSource, TDestination, TMember>();
+        configure(options);
+
+        if (mapping is not DefaultMappingProcessor<TSource, TDestination> processor)
+        {
+            throw new InvalidOperationException($"ForMember is not supported by {mapping.GetType().Name}.");
+        }
+
+        if (options.Resolve is null)
+        {
+            throw new InvalidOperationException("A value resolver must be configured using MapFrom<TResolver>().");
+        }
+
+        processor.AddMemberMapping(destinationMember, options.Resolve);
+
         return mapping;
     }
 

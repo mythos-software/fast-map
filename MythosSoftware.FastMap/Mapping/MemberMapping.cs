@@ -11,4 +11,6 @@ internal sealed class MemberMapping
     public bool Ignored { get; init; }
 
     public Delegate? SourceGetter { get; init; }
+
+    public Delegate? Resolver { get; init; }
 }
