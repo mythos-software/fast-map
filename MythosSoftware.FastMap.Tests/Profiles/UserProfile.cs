@@ -7,15 +7,15 @@ public class UserProfile: Profile
     public UserProfile()
     {
         CreateMap<User, User>()
-            .ForMember(src => src.Id, opt => opt.Ignore());
+            .ForMember(dest => dest.Id, opt => opt.Ignore());
         
         CreateMap<StringUser, User>()
-            .ForMember(src => src.Id, opt => opt.Ignore())
-            .ForMember(src => src.Type, opt => opt.MapFrom(src => Enum.Parse<UserType>(src.Type)));
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => Enum.Parse<UserType>(src.Type)));
 
         CreateMap<User, StringUser>()
-            .ForMember(src => src.Id, opt => opt.Ignore())
-            .ForMember(src => src.Type, opt => opt.MapFrom(src => src.Type.ToString()));
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type.ToString()));
         
         CreateMap<UserType, UserType>();
     }

@@ -7,6 +7,6 @@ public class HobbyProfile : Profile
     public HobbyProfile()
     {
         CreateMap<SimpleHobby, SimpleHobby>()
-            .ForMember(src => src.Id, opt => opt.Ignore());
+            .ForMember(dest => dest.Id, opt => opt.Ignore());
     }
 }

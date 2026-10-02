@@ -17,8 +17,8 @@ public class ReverseMappingTestsShould
         public OneWayTestProfile()
         {
             CreateMap<SimplePerson, ModifiedSimplePerson>()
-                .ForMember(src => src.FirstName, opt => opt.MapFrom(dest => dest.Name))
-                .ForMember(src => src.LastName, opt => opt.MapFrom(dest => dest.Surname));
+                .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.Name))
+                .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.Surname));
         }
     }
     
@@ -27,7 +27,7 @@ public class ReverseMappingTestsShould
         public TwoWaySimpleTestProfile()
         {
             CreateMap<SimplePerson, SimpleDestinationPerson>()
-                .ForMember(src => src.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ReverseMap();
         }
     }
@@ -37,8 +37,8 @@ public class ReverseMappingTestsShould
         public TwoWayTestProfile()
         {
             CreateMap<SimplePerson, ModifiedSimplePerson>()
-                .ForMember(src => src.FirstName, opt => opt.MapFrom(dest => dest.Name))
-                .ForMember(src => src.LastName, opt => opt.MapFrom(dest => dest.Surname))
+                .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.Name))
+                .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.Surname))
                 .ReverseMap();
         }
     }

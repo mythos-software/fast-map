@@ -7,13 +7,13 @@ public class PersonProfile : Profile
     public PersonProfile()
     {
         CreateMap<SimplePerson, SimplePerson>()
-            .ForMember(src => src.Id, opt => opt.Ignore());
+            .ForMember(dest => dest.Id, opt => opt.Ignore());
         
         CreateMap<SimplePerson, SimpleDestinationPerson>();
         
         CreateMap<SimplePerson, ModifiedSimplePerson>()
-            .ForMember(src => src.FirstName, opt => opt.MapFrom(dest => dest.Name))
-            .ForMember(src => src.LastName, opt => opt.MapFrom(dest => dest.Surname));
+            .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.Surname));
         
         CreateMap<SubclassPerson, SubclassDestinatonPerson>();
         
