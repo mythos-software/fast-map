@@ -5,7 +5,10 @@ using MythosSoftware.FastMap.Tests.Providers;
 
 namespace MythosSoftware.FastMap.Tests;
 
-public class CollectionMappingRegressionTests
+/// <summary>
+/// Test class for regression testing
+/// </summary>
+public class CollectionMappingRegressionTestsShould
 {
     [Fact]
     public void MapListToArray()
