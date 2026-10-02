@@ -34,7 +34,18 @@ public static class ProfileExtensions
 
         return mapping;
     }
-    
+
+    public static IMappingProcessor<TSource, TDestination> ForMember<
+        TSource, TDestination, TMember>(
+        this IMappingProcessor<TSource, TDestination> mapping,
+        Expression<Func<TDestination, TMember>> destinationMember,
+        Action<MemberOptions<TSource, TDestination, TMember>> configure)
+    {
+        //"Work in progress"
+        return mapping;
+    }
+
+
     public static void ReverseMap<
         TSource,
         TDestination>(this IMappingProcessor<TSource, TDestination> mapping)
