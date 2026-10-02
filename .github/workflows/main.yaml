@@ -6,7 +6,7 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -85,3 +85,19 @@ jobs:
           --source "https://api.nuget.org/v3/index.json"
           --api-key "${{ secrets.NUGET_API_KEY }}"
           --skip-duplicate
+
+      - name: Commit and push project version
+        shell: bash
+        run: |
+          PROJECT_FILE="MythosSoftware.FastMap/MythosSoftware.FastMap.csproj"
+
+          if git diff --quiet -- "$PROJECT_FILE"; then
+            echo "Project version is already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$PROJECT_FILE"
+          git commit -m "chore: set project version to $PACKAGE_VERSION [skip ci]"
+          git push origin "HEAD:$GITHUB_REF_NAME"
