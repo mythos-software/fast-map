@@ -22,6 +22,35 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Synchronize project and package version
+        shell: bash
+        run: |
+          BASE_VERSION=$(grep -oPm1 '(?<=<Version>)[^<]+' MythosSoftware.FastMap/MythosSoftware.FastMap.csproj)
+          VERSION_PREFIX=$(echo "$BASE_VERSION" | cut -d. -f1,2)
+          PACKAGE_VERSION="${VERSION_PREFIX}.${GITHUB_RUN_NUMBER}"
+
+          PACKAGE_VERSION="$PACKAGE_VERSION" python3 - <<'PYTHON'
+          import os
+          import re
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          project = Path("MythosSoftware.FastMap/MythosSoftware.FastMap.csproj")
+          content = project.read_text()
+          updated, count = re.subn(
+              r"(<Version>)[^<]*(</Version>)",
+              lambda match: match[1] + os.environ["PACKAGE_VERSION"] + match[2],
+              content,
+          )
+          if count != 1:
+              raise SystemExit("Expected exactly one <Version> element in the project file")
+          ET.fromstring(updated)
+          project.write_text(updated)
+          PYTHON
+
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> "$GITHUB_ENV"
+          echo "Project and package version: $PACKAGE_VERSION"
+
       - name: Restore dependencies
         run: dotnet restore MythosSoftware.FastMap/MythosSoftware.FastMap.csproj
 
@@ -38,14 +67,6 @@ jobs:
       - name: Generate NuGet package
         shell: bash
         run: |
-          BASE_VERSION=$(grep -oPm1 '(?<=<Version>)[^<]+' MythosSoftware.FastMap/MythosSoftware.FastMap.csproj)
-
-          VERSION_PREFIX=$(echo "$BASE_VERSION" | cut -d. -f1,2)
-          PACKAGE_VERSION="${VERSION_PREFIX}.${GITHUB_RUN_NUMBER}"
-
-          echo "Base version: $BASE_VERSION"
-          echo "Package version: $PACKAGE_VERSION"
-
           dotnet pack \
             MythosSoftware.FastMap/MythosSoftware.FastMap.csproj \
             --configuration Release \
